@@ -4,7 +4,7 @@ export interface Message {
   user_id: string;
   username: string;
   content: string;
-  type: "text" | "image" | "file";
+  type: 'text' | 'image' | 'file';
   timestamp: number;
   edited_at?: number;
   deleted_at?: number;
@@ -14,14 +14,14 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  status: "online" | "offline";
+  status: 'online' | 'offline';
   avatar_url?: string;
 }
 
 export interface Room {
   id: number;
   name: string;
-  type: "direct" | "group";
+  type: 'direct' | 'group';
   created_by: string;
   created_at: number;
   members?: User[];
@@ -30,7 +30,18 @@ export interface Room {
 }
 
 export interface WSMessage {
-  type: "chat" | "typing" | "presence" | "webrtc" | "room_update" | "error";
+  type:
+    | 'chat'
+    | 'typing'
+    | 'presence'
+    | 'webrtc'
+    | 'room_update'
+    | 'error'
+    | 'incoming_call'
+    | 'call_active'
+    | 'call_ended'
+    | 'call_rejected'
+    | 'call_end';
   payload: any;
   timestamp: number;
 }
@@ -43,7 +54,7 @@ export interface TypingStatus {
 }
 
 export interface WebRTCSignal {
-  type: "offer" | "answer" | "ice-candidate" | "call-start" | "call-end";
+  type: 'offer' | 'answer' | 'ice-candidate' | 'call-start' | 'call-end';
   from: string;
   to: string;
   room_id: number;
