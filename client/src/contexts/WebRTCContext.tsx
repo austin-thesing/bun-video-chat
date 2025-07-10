@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useRef, useState, useEffect } from "react";
-import { WebRTCService, WebRTCConnection } from "../services/webrtc";
-import { WebRTCSignal } from "../types";
-import { useWebSocket } from "./WebSocketContext";
+import React, {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
+import { WebRTCService, WebRTCConnection } from '../services/webrtc';
+import { WebRTCSignal, WSMessage } from '../types';
+import { useWebSocket } from './WebSocketContext';
 
 interface WebRTCContextType {
   localStream: MediaStream | null;
@@ -25,64 +31,109 @@ const WebRTCContext = createContext<WebRTCContextType | undefined>(undefined);
 export const useWebRTC = () => {
   const context = useContext(WebRTCContext);
   if (!context) {
-    throw new Error("useWebRTC must be used within a WebRTCProvider");
+    throw new Error('useWebRTC must be used within a WebRTCProvider');
   }
   return context;
 };
 
-export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isConnected } = useWebSocket();
+export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isConnected, send, addMessageHandler, removeMessageHandler } = useWebSocket();
   const webRTCService = useRef<WebRTCService | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
-  const [connections, setConnections] = useState<Map<string, WebRTCConnection>>(new Map());
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
+    new Map()
+  );
+  const [connections, setConnections] = useState<Map<string, WebRTCConnection>>(
+    new Map()
+  );
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isInCall, setIsInCall] = useState(false);
-  const [connectionStates, setConnectionStates] = useState<Map<string, RTCPeerConnectionState>>(new Map());
+  const [connectionStates, setConnectionStates] = useState<
+    Map<string, RTCPeerConnectionState>
+  >(new Map());
+
+  // Initialize WebRTC service
+  useEffect(() => {
+    if (!webRTCService.current) {
+      webRTCService.current = new WebRTCService();
+      
+      // Set up stream handler
+      webRTCService.current.addStreamHandler((stream: MediaStream, userId: string) => {
+        setRemoteStreams(prev => new Map(prev).set(userId, stream));
+      });
+      
+      // Set up connection state handler
+      webRTCService.current.addConnectionStateHandler((state: RTCPeerConnectionState) => {
+        setConnectionStates(prev => new Map(prev).set('current', state));
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!isConnected) return;
 
-    webRTCService.current = new WebRTCService();
+    const handleWebRTCMessage = (message: WSMessage) => {
+      if (message.type !== "webrtc") return;
 
-    const handleSignal = (signal: WebRTCSignal) => {
-      // TODO: Send signal through WebSocket
-      console.log("Sending WebRTC signal:", signal);
+      const { payload } = message;
+      const { type, from_user_id, data } = payload;
+
+      if (!webRTCService.current) return;
+
+      switch (type) {
+        case "offer":
+          webRTCService.current.handleOffer(from_user_id, data);
+          break;
+        case "answer":
+          webRTCService.current.handleAnswer(from_user_id, data);
+          break;
+        case "ice_candidate":
+          webRTCService.current.handleIceCandidate(from_user_id, data);
+          break;
+      }
     };
 
-    const handleStream = (stream: MediaStream, userId: string) => {
-      setRemoteStreams((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(userId, stream);
-        return newMap;
-      });
+    const handleIncomingCall = (message: WSMessage) => {
+      if (message.type !== "incoming_call") return;
+      // TODO: Show incoming call UI
+      console.log('Incoming call from:', message.payload.from_username);
     };
 
-    const handleConnectionState = (state: RTCPeerConnectionState) => {
-      console.log("Connection state changed:", state);
-      // TODO: Update connection state for specific user
+    const handleCallActive = (message: WSMessage) => {
+      if (message.type !== "call_active") return;
+      setIsInCall(true);
     };
 
-    webRTCService.current.addSignalHandler(handleSignal);
-    webRTCService.current.addStreamHandler(handleStream);
-    webRTCService.current.addConnectionStateHandler(handleConnectionState);
+    const handleCallEnded = (message: WSMessage) => {
+      if (message.type !== "call_ended") return;
+      endCall();
+    };
+
+    addMessageHandler(handleWebRTCMessage);
+    addMessageHandler(handleIncomingCall);
+    addMessageHandler(handleCallActive);
+    addMessageHandler(handleCallEnded);
 
     return () => {
-      webRTCService.current?.removeSignalHandler(handleSignal);
-      webRTCService.current?.removeStreamHandler(handleStream);
-      webRTCService.current?.removeConnectionStateHandler(handleConnectionState);
-      webRTCService.current?.closeAllConnections();
-      webRTCService.current?.stopLocalStream();
+      removeMessageHandler(handleWebRTCMessage);
+      removeMessageHandler(handleIncomingCall);
+      removeMessageHandler(handleCallActive);
+      removeMessageHandler(handleCallEnded);
     };
-  }, [isConnected]);
+  }, [isConnected, addMessageHandler, removeMessageHandler]);
 
   const initializeCall = async (userId: string) => {
     if (!webRTCService.current) return;
 
     try {
       // Initialize local stream
-      const stream = await webRTCService.current.initializeLocalStream(true, true);
+      const stream = await webRTCService.current.initializeLocalStream(
+        true,
+        true
+      );
       setLocalStream(stream);
 
       // Create connection
@@ -91,13 +142,21 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Create offer
       const offer = await webRTCService.current.createOffer(userId);
-      
+
       // TODO: Send offer through WebSocket
-      console.log("Sending offer to", userId, offer);
-      
+      console.log('Sending offer to', userId, offer);
+      send({
+        type: 'webrtc',
+        payload: {
+          type: 'offer',
+          to_user_id: userId,
+          data: offer,
+        },
+      });
+
       setIsInCall(true);
     } catch (error) {
-      console.error("Failed to initialize call:", error);
+      console.error('Failed to initialize call:', error);
     }
   };
 
@@ -106,7 +165,10 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       // Initialize local stream
-      const stream = await webRTCService.current.initializeLocalStream(true, true);
+      const stream = await webRTCService.current.initializeLocalStream(
+        true,
+        true
+      );
       setLocalStream(stream);
 
       // Create connection
@@ -114,10 +176,19 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setConnections((prev) => new Map(prev).set(userId, connection));
 
       // TODO: Handle incoming offer and create answer
-      
+      const answer = await webRTCService.current.createAnswer(userId);
+      send({
+        type: 'webrtc',
+        payload: {
+          type: 'answer',
+          to_user_id: userId,
+          data: answer,
+        },
+      });
+
       setIsInCall(true);
     } catch (error) {
-      console.error("Failed to accept call:", error);
+      console.error('Failed to accept call:', error);
     }
   };
 
@@ -166,14 +237,20 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const screenStream = await webRTCService.current.initializeScreenShare();
       setLocalStream(screenStream);
-      
-      // TODO: Update existing connections with screen share
-      
-    } catch (error) {
-      console.error("Failed to start screen share:", error);
-    }
-  };
 
+      // TODO: Update existing connections with screen share
+      connections.forEach(async (connection, userId) => {
+        const offer = await webRTCService.current.createOffer(userId);
+        send({
+          type: "webrtc",
+          payload: {
+            type: "offer",
+            to_user_id: userId,
+            data: offer
+          }
+        })
+      })
+      
   const stopScreenShare = () => {
     if (!webRTCService.current) return;
 

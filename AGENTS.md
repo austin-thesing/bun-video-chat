@@ -1,19 +1,29 @@
-## Build, Lint, and Test
+# AGENTS.md - Bun Video Chat Development Guide
 
-- **Run the server:** `bun run server/src/index.ts`
-- **Run the client:** The client is served by the server.
+## Build, Lint, and Test Commands
+
 - **Install dependencies:** `bun install`
+- **Run dev server:** `bun run dev` (starts server with hot reload)
 - **Run tests:** `bun test`
-- **Run a single test:** `bun test <path/to/test.ts>`
-- **Lint and format:** `bunx rome check .` and `bunx rome format . --write`
+- **Run single test:** `bun test <path/to/test.ts>`
+- **Lint:** `bun run lint` (ESLint)
+- **Format:** `bun run format` (Prettier)
+- **Build CSS:** `bun run build:css` or `bun run watch:css`
+- **Database:** `bun run db:migrate`, `bun run db:seed`, `bun run db:test`
 
-## Code Style
+## Code Style Guidelines
 
-- **Imports:** Use ES module syntax (`import`/`export`).
-- **Formatting:** Use Rome for formatting.
-- **Types:** Use TypeScript with strict mode enabled.
-- **Naming Conventions:** Use camelCase for variables and functions, and PascalCase for components and types.
-- **Error Handling:** Use `try...catch` blocks for asynchronous operations and throw `Error` objects.
-- **Database:** Use `bun:sqlite` for database access. See `server/src/migrations` for schema.
-- **Frontend:** Use React with TypeScript.
-- **Backend:** Use Bun's built-in APIs for serving content and WebSockets.
+- **Runtime:** Use Bun native APIs (`Bun.serve()`, `bun:sqlite`, `Bun.file()`) instead of Node.js equivalents
+- **Imports:** ES modules only (`import`/`export`)
+- **Types:** TypeScript strict mode, explicit types for function parameters/returns
+- **Naming:** camelCase for variables/functions, PascalCase for components/types
+- **Formatting:** Prettier config (2 spaces, single quotes, semicolons, 80 char width)
+- **Error Handling:** `try...catch` for async operations, throw `Error` objects
+- **Database:** Use Kysely query builder with `bun:sqlite`, see `server/src/models/` for patterns
+- **Frontend:** React 18 + TypeScript, use contexts for state management
+- **WebSocket:** Use built-in WebSocket API, see `server/src/websocket/` handlers
+
+## Cursor Rules
+
+- Always use `bun` instead of `node`, `npm`, `pnpm`, or `vite`
+- Prefer Bun's native APIs over third-party alternatives
