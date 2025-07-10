@@ -1,5 +1,7 @@
-import React from "react";
-import { Message } from "../../types";
+import React from 'react';
+import { Message } from '../../types';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
 
 interface MessageItemProps {
   message: Message;
@@ -9,8 +11,8 @@ interface MessageItemProps {
 const MessageItem: React.FC<MessageItemProps> = ({ message, isOwn }) => {
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -19,35 +21,37 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwn }) => {
   };
 
   return (
-    <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+    <div className={`flex mb-4 ${isOwn ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-xs lg:max-w-md xl:max-w-lg flex ${
-          isOwn ? "flex-row-reverse" : "flex-row"
+        className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex ${
+          isOwn ? 'flex-row-reverse' : 'flex-row'
         }`}
       >
         {/* Avatar */}
-        <div
-          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
-            isOwn ? "bg-blue-500 ml-2" : "bg-gray-500 mr-2"
-          }`}
-        >
-          {getInitials(message.username)}
-        </div>
+        <Avatar className={`flex-shrink-0 w-8 h-8 ${isOwn ? 'ml-2' : 'mr-2'}`}>
+          <AvatarFallback
+            className={
+              isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
+            }
+          >
+            {getInitials(message.username)}
+          </AvatarFallback>
+        </Avatar>
 
         {/* Message Content */}
-        <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
           {/* Username and Time */}
           <div
             className={`flex items-center mb-1 ${
-              isOwn ? "flex-row-reverse" : "flex-row"
+              isOwn ? 'flex-row-reverse' : 'flex-row'
             }`}
           >
-            <span className="font-semibold text-sm text-gray-700">
+            <span className="font-semibold text-sm text-foreground">
               {message.username}
             </span>
             <span
-              className={`text-xs text-gray-500 ${
-                isOwn ? "mr-2" : "ml-2"
+              className={`text-xs text-muted-foreground ${
+                isOwn ? 'mr-2' : 'ml-2'
               }`}
             >
               {formatTime(message.timestamp)}
@@ -58,8 +62,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwn }) => {
           <div
             className={`rounded-lg px-3 py-2 max-w-full break-words ${
               isOwn
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-800"
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground'
             }`}
           >
             <p className="text-sm">{message.content}</p>
@@ -67,9 +71,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwn }) => {
 
           {/* Message Status */}
           {message.edited_at && (
-            <span className="text-xs text-gray-400 mt-1">
+            <Badge variant="secondary" className="text-xs mt-1">
               edited {formatTime(message.edited_at)}
-            </span>
+            </Badge>
           )}
         </div>
       </div>

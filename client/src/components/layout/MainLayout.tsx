@@ -1,10 +1,14 @@
-import React, { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import { useWebSocket } from "../../contexts/WebSocketContext";
-import { useWebRTC } from "../../contexts/WebRTCContext";
-import Sidebar from "./Sidebar";
-import ChatWindow from "../chat/ChatWindow";
-import VideoCall from "../video/VideoCall";
+import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../contexts/WebSocketContext';
+import { useWebRTC } from '../../contexts/WebRTCContext';
+import Sidebar from './Sidebar';
+import ChatWindow from '../chat/ChatWindow';
+import VideoCall from '../video/VideoCall';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
+import { Menu, Video, VideoOff, LogOut } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -17,59 +21,114 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Sidebar */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden fixed top-4 left-4 z-40"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-80">
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b px-6 py-4">
+        <header className="bg-card shadow-sm border-b px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold">Bun Video Chat</h1>
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isConnected ? "bg-green-500" : "bg-red-500"
-                  }`}
-                />
-                <span className="text-sm text-gray-600">
-                  {isConnected ? "Connected" : "Disconnected"}
-                </span>
-              </div>
+              <h1 className="text-lg md:text-xl font-semibold">
+                Bun Video Chat
+              </h1>
+              <Badge
+                variant={isConnected ? 'default' : 'destructive'}
+                className="hidden sm:flex"
+              >
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </Badge>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
+
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <span className="text-sm text-muted-foreground hidden sm:block">
                 Welcome, {user?.username}!
               </span>
-              <button
+              <Button
                 onClick={() => setShowVideoCall(!showVideoCall)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                variant="outline"
+                size="sm"
+                className="hidden md:flex"
               >
-                {showVideoCall ? "Hide Video" : "Show Video"}
-              </button>
-              <button
+                {showVideoCall ? (
+                  <VideoOff className="h-4 w-4 mr-2" />
+                ) : (
+                  <Video className="h-4 w-4 mr-2" />
+                )}
+                {showVideoCall ? 'Hide Video' : 'Show Video'}
+              </Button>
+              <Button
+                onClick={() => setShowVideoCall(!showVideoCall)}
+                variant="outline"
+                size="icon"
+                className="md:hidden"
+              >
+                {showVideoCall ? (
+                  <VideoOff className="h-4 w-4" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                variant="destructive"
+                size="sm"
+                className="hidden md:flex"
               >
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
-              </button>
+              </Button>
+              <Button
+                onClick={handleLogout}
+                variant="destructive"
+                size="icon"
+                className="md:hidden"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col md:flex-row">
           {/* Chat Area */}
-          <div className={`${showVideoCall ? "flex-1" : "w-full"} flex flex-col`}>
+          <div
+            className={`${showVideoCall && !isInCall ? 'md:flex-1' : 'w-full'} flex flex-col`}
+          >
             <ChatWindow />
           </div>
 
-          {/* Video Call Area */}
-          {showVideoCall && (
-            <div className="w-96 border-l bg-white">
+          {/* Video Call Area - Desktop */}
+          {showVideoCall && !isInCall && (
+            <div className="hidden md:block w-96 border-l bg-card">
+              <VideoCall />
+            </div>
+          )}
+
+          {/* Video Call Area - Mobile (Full Width) */}
+          {showVideoCall && !isInCall && (
+            <div className="md:hidden h-64 border-t bg-card">
               <VideoCall />
             </div>
           )}

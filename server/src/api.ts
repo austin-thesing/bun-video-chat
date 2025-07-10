@@ -2,6 +2,21 @@ import { db, sqlite } from './database.ts';
 import { handleAuthRequest } from './auth.ts';
 import bcrypt from 'bcryptjs';
 
+function createAuthCookie(token: string): string {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOptions = [
+    'HttpOnly',
+    'Path=/',
+    'Max-Age=86400',
+    isProduction ? 'Secure' : '',
+    'SameSite=Strict',
+  ]
+    .filter(Boolean)
+    .join('; ');
+
+  return `auth-token=${token}; ${cookieOptions}`;
+}
+
 export async function handleApiRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
@@ -23,7 +38,7 @@ export async function handleApiRequest(req: Request): Promise<Response> {
     }
 
     if (path === '/api/logout' && method === 'POST') {
-      return await logoutUser();
+      return await logoutUser(req);
     }
 
     if (path === '/api/me' && method === 'GET') {
@@ -241,7 +256,7 @@ async function registerUser(req: Request): Promise<Response> {
     return new Response(JSON.stringify(userData), {
       headers: {
         'Content-Type': 'application/json',
-        'Set-Cookie': `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
+        'Set-Cookie': createAuthCookie(token),
       },
       status: 201,
     });
@@ -301,17 +316,28 @@ async function loginUser(req: Request): Promise<Response> {
   return new Response(JSON.stringify(userData), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
+      'Set-Cookie': createAuthCookie(token),
     },
   });
 }
 
-async function logoutUser(): Promise<Response> {
-  // Clear the auth cookie
+async function logoutUser(req: Request): Promise<Response> {
+  // Clear the auth cookie with environment-aware settings
+  const isProduction = process.env.NODE_ENV === 'production';
+  const clearCookieOptions = [
+    'HttpOnly',
+    'Path=/',
+    'Max-Age=0',
+    isProduction ? 'Secure' : '',
+    'SameSite=Strict',
+  ]
+    .filter(Boolean)
+    .join('; ');
+
   return new Response(JSON.stringify({ message: 'Logged out successfully' }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': 'auth-token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict',
+      'Set-Cookie': `auth-token=; ${clearCookieOptions}`,
     },
   });
 }

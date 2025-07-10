@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useWebSocket } from "../../contexts/WebSocketContext";
-import { useAuth } from "../../contexts/AuthContext";
+import React, { useState, useRef, useEffect } from 'react';
+import { useWebSocket } from '../../contexts/WebSocketContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface MessageInputProps {
   roomId: number;
@@ -9,7 +11,7 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ roomId }) => {
   const { sendMessage, sendTyping, isConnected } = useWebSocket();
   const { user } = useAuth();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -26,8 +28,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ roomId }) => {
     if (!message.trim() || !isConnected || !user) return;
 
     sendMessage(message.trim(), roomId);
-    setMessage("");
-    
+    setMessage('');
+
     // Stop typing indicator
     if (isTyping) {
       sendTyping(roomId, false);
@@ -61,31 +63,32 @@ const MessageInput: React.FC<MessageInputProps> = ({ roomId }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
     }
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 border-t bg-background">
       <form onSubmit={handleSubmit} className="flex space-x-2">
-        <input
+        <Input
           type="text"
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="flex-1"
           placeholder="Type a message..."
           disabled={!isConnected}
         />
-        <button
+        <Button
           type="submit"
           disabled={!isConnected || !message.trim()}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          size="sm"
+          className="px-6"
         >
           Send
-        </button>
+        </Button>
       </form>
     </div>
   );
