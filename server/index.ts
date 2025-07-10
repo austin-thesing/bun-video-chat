@@ -1,7 +1,7 @@
-import { websocketHandler } from "./src/websocket/index.ts";
-import { handleApiRequest } from "./src/api.ts";
+import { websocketHandler } from './src/websocket/index.ts';
+import { handleApiRequest } from './src/api.ts';
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV !== 'production';
 
 function log(...args: any[]) {
   if (isDev) {
@@ -23,19 +23,19 @@ const server = Bun.serve({
 
     try {
       // Handle WebSocket upgrade
-      if (path === "/ws") {
-        log("WebSocket upgrade requested");
+      if (path === '/ws') {
+        log('WebSocket upgrade requested');
         const success = server.upgrade(req);
         if (success) {
-          log("WebSocket upgrade successful");
+          log('WebSocket upgrade successful');
           return undefined;
         }
-        log("WebSocket upgrade failed");
-        return new Response("WebSocket upgrade failed", { status: 400 });
+        log('WebSocket upgrade failed');
+        return new Response('WebSocket upgrade failed', { status: 400 });
       }
 
       // Handle API routes
-      if (path.startsWith("/api/")) {
+      if (path.startsWith('/api/')) {
         log(`API request: ${method} ${path}`);
         const response = await handleApiRequest(req);
         log(`API response: ${response.status}`);
@@ -44,15 +44,20 @@ const server = Bun.serve({
 
       // Handle static files
       let filePath = path;
-      if (filePath === "/") {
-        filePath = "/index.html";
-        log("Serving index.html");
+      if (filePath === '/') {
+        filePath = '/index.html';
+        log('Serving index.html');
       }
 
-      const clientPath = import.meta.dir + "/../client";
+      const clientPath = import.meta.dir + '/../client';
 
       // Handle TypeScript/JSX files - let Bun transpile them
-      if (filePath.endsWith('.tsx') || filePath.endsWith('.ts') || filePath.endsWith('.jsx') || filePath.endsWith('.js')) {
+      if (
+        filePath.endsWith('.tsx') ||
+        filePath.endsWith('.ts') ||
+        filePath.endsWith('.jsx') ||
+        filePath.endsWith('.js')
+      ) {
         log(`Transpiling: ${filePath}`);
         const file = Bun.file(clientPath + filePath);
         if (await file.exists()) {
@@ -62,7 +67,42 @@ const server = Bun.serve({
             format: 'esm',
             minify: false,
             sourcemap: 'inline',
-            external: ['v8', 'fs', 'path', 'util', 'crypto', 'stream', 'events', 'buffer', 'os', 'url', 'querystring', 'zlib', 'http', 'https', 'net', 'tls', 'cluster', 'child_process', 'worker_threads', 'perf_hooks', 'async_hooks', 'inspector', 'repl', 'readline', 'domain', 'dgram', 'dns', 'vm', 'string_decoder', 'timers', 'tty', 'assert', 'punycode', 'constants'],
+            external: [
+              'v8',
+              'fs',
+              'path',
+              'util',
+              'crypto',
+              'stream',
+              'events',
+              'buffer',
+              'os',
+              'url',
+              'querystring',
+              'zlib',
+              'http',
+              'https',
+              'net',
+              'tls',
+              'cluster',
+              'child_process',
+              'worker_threads',
+              'perf_hooks',
+              'async_hooks',
+              'inspector',
+              'repl',
+              'readline',
+              'domain',
+              'dgram',
+              'dns',
+              'vm',
+              'string_decoder',
+              'timers',
+              'tty',
+              'assert',
+              'punycode',
+              'constants',
+            ],
           });
 
           if (transpiled.success && transpiled.outputs[0]) {
@@ -100,13 +140,19 @@ const server = Bun.serve({
                         const text = await Bun.file(args.path).text();
                         let processed = text
                           .replace('@tailwind base;', '/* Base styles */')
-                          .replace('@tailwind components;', '/* Component styles */')
-                          .replace('@tailwind utilities;', '/* Utility styles */');
+                          .replace(
+                            '@tailwind components;',
+                            '/* Component styles */'
+                          )
+                          .replace(
+                            '@tailwind utilities;',
+                            '/* Utility styles */'
+                          );
                         return { contents: processed, loader: 'css' };
                       });
-                    }
-                  }
-                ]
+                    },
+                  },
+                ],
               });
 
               if (transpiled.success && transpiled.outputs[0]) {
@@ -138,10 +184,11 @@ const server = Bun.serve({
 
       // Fallback for SPA
       log(`Fallback to index.html for: ${filePath}`);
-      return new Response(Bun.file(clientPath + "/index.html"));
+      return new Response(Bun.file(clientPath + '/index.html'));
     } catch (error) {
       log(`Server error for ${method} ${path}:`, error);
-      return new Response(`Server Error: ${error.message}`, { status: 500 });
+      const message = error instanceof Error ? error.message : String(error);
+      return new Response(`Server Error: ${message}`, { status: 500 });
     }
   },
   websocket: websocketHandler,
@@ -149,6 +196,6 @@ const server = Bun.serve({
 
 console.log(`🚀 Server running on http://localhost:${server.port}`);
 if (isDev) {
-  console.log("📝 Development mode: Verbose logging enabled");
-  console.log("🔄 Hot reloading enabled");
+  console.log('📝 Development mode: Verbose logging enabled');
+  console.log('🔄 Hot reloading enabled');
 }
