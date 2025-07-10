@@ -74,6 +74,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         case 'room_update':
           handleRoomUpdate(message);
           break;
+        case 'room_joined':
+          console.log('Successfully joined room:', message.payload.room_id);
+          break;
+        case 'room_left':
+          console.log('Left room:', message.payload.room_id);
+          break;
+        case 'user_joined':
+          console.log('User joined room:', message.payload);
+          break;
+        case 'user_left':
+          console.log('User left room:', message.payload);
+          break;
         case 'error':
           console.error('WebSocket error:', message.payload);
           break;
@@ -212,8 +224,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const joinRoom = (roomId: number) => {
+    if (!wsService.current || !user) return;
+
     setCurrentRoom(roomId);
-    // TODO: Send join room message to server
+
+    // Send join room message to server
+    wsService.current.send({
+      type: 'join_room',
+      payload: {
+        room_id: roomId,
+      },
+      timestamp: Date.now(),
+    });
   };
 
   const createRoom = (

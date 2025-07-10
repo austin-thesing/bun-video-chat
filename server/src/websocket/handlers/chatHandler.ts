@@ -1,8 +1,8 @@
-import { ServerWebSocket } from "bun";
-import { db } from "../../database.ts";
-import { WSMessage, ChatMessage } from "../../types.ts";
-import { WebSocketData, connectionManager } from "../connectionManager.ts";
-import { broadcast } from "../utils.ts";
+import { ServerWebSocket } from 'bun';
+import { db, sqlite } from '../../database.ts';
+import { WSMessage, ChatMessage } from '../../types.ts';
+import { WebSocketData, connectionManager } from '../connectionManager.ts';
+import { broadcast } from '../utils.ts';
 
 export async function handleChatMessage(
   ws: ServerWebSocket<WebSocketData>,
@@ -12,34 +12,38 @@ export async function handleChatMessage(
     // Validate user is in the room
     const userData = connectionManager.getConnectionData(ws);
     if (!userData || userData.room_id !== message.room_id) {
-      ws.send(JSON.stringify({
-        type: "error",
-        payload: { message: "You are not in this room" },
-        timestamp: Date.now(),
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          payload: { message: 'You are not in this room' },
+          timestamp: Date.now(),
+        })
+      );
       return;
     }
 
-    // Save message to database
-    const result = await db
-      .insertInto("messages")
-      .values({
-        room_id: message.room_id,
-        user_id: message.user_id,
-        content: message.content,
-        type: message.type || "text",
-        created_at: new Date().toISOString(),
-      })
-      .returning(["id", "created_at"])
-      .executeTakeFirst();
+    // Save message to database using sqlite directly
+    const stmt = sqlite.prepare(`
+      INSERT INTO messages (room_id, user_id, content, type, created_at) 
+      VALUES (?, ?, ?, ?, ?) 
+      RETURNING id, created_at
+    `);
+
+    const result = stmt.get(
+      message.room_id,
+      message.user_id,
+      message.content,
+      message.type || 'text',
+      new Date().toISOString()
+    ) as { id: number; created_at: string };
 
     if (!result) {
-      throw new Error("Failed to save message");
+      throw new Error('Failed to save message');
     }
 
     // Prepare broadcast message
     const broadcastMessage: WSMessage = {
-      type: "chat",
+      type: 'chat',
       payload: {
         ...message,
         id: result.id,
@@ -53,19 +57,22 @@ export async function handleChatMessage(
     broadcast.toRoom(message.room_id, broadcastMessage);
 
     // Send confirmation to sender
-    ws.send(JSON.stringify({
-      type: "chat_sent",
-      payload: { message_id: result.id },
-      timestamp: Date.now(),
-    }));
-
+    ws.send(
+      JSON.stringify({
+        type: 'chat_sent',
+        payload: { message_id: result.id },
+        timestamp: Date.now(),
+      })
+    );
   } catch (error) {
-    console.error("Error handling chat message:", error);
-    ws.send(JSON.stringify({
-      type: "error",
-      payload: { message: "Failed to send message" },
-      timestamp: Date.now(),
-    }));
+    console.error('Error handling chat message:', error);
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        payload: { message: 'Failed to send message' },
+        timestamp: Date.now(),
+      })
+    );
   }
 }
 
@@ -79,23 +86,23 @@ export async function handleMessageEdit(
 
     // Update message in database
     const result = await db
-      .updateTable("messages")
+      .updateTable('messages')
       .set({
         content: payload.content,
         edited_at: new Date().toISOString(),
       })
-      .where("id", "=", payload.message_id)
-      .where("user_id", "=", userData.user_id!)
-      .returning(["id", "edited_at"])
+      .where('id', '=', payload.message_id)
+      .where('user_id', '=', userData.user_id!)
+      .returning(['id', 'edited_at'])
       .executeTakeFirst();
 
     if (!result) {
-      throw new Error("Message not found or unauthorized");
+      throw new Error('Message not found or unauthorized');
     }
 
     // Broadcast update to room
     const broadcastMessage: WSMessage = {
-      type: "message_edited",
+      type: 'message_edited',
       payload: {
         message_id: payload.message_id,
         content: payload.content,
@@ -106,14 +113,15 @@ export async function handleMessageEdit(
     };
 
     broadcast.toRoom(payload.room_id, broadcastMessage);
-
   } catch (error) {
-    console.error("Error editing message:", error);
-    ws.send(JSON.stringify({
-      type: "error",
-      payload: { message: "Failed to edit message" },
-      timestamp: Date.now(),
-    }));
+    console.error('Error editing message:', error);
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        payload: { message: 'Failed to edit message' },
+        timestamp: Date.now(),
+      })
+    );
   }
 }
 
@@ -127,22 +135,22 @@ export async function handleMessageDelete(
 
     // Soft delete message
     const result = await db
-      .updateTable("messages")
+      .updateTable('messages')
       .set({
         deleted_at: new Date().toISOString(),
       })
-      .where("id", "=", payload.message_id)
-      .where("user_id", "=", userData.user_id!)
-      .returning("id")
+      .where('id', '=', payload.message_id)
+      .where('user_id', '=', userData.user_id!)
+      .returning('id')
       .executeTakeFirst();
 
     if (!result) {
-      throw new Error("Message not found or unauthorized");
+      throw new Error('Message not found or unauthorized');
     }
 
     // Broadcast deletion to room
     const broadcastMessage: WSMessage = {
-      type: "message_deleted",
+      type: 'message_deleted',
       payload: {
         message_id: payload.message_id,
         room_id: payload.room_id,
@@ -151,14 +159,15 @@ export async function handleMessageDelete(
     };
 
     broadcast.toRoom(payload.room_id, broadcastMessage);
-
   } catch (error) {
-    console.error("Error deleting message:", error);
-    ws.send(JSON.stringify({
-      type: "error",
-      payload: { message: "Failed to delete message" },
-      timestamp: Date.now(),
-    }));
+    console.error('Error deleting message:', error);
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        payload: { message: 'Failed to delete message' },
+        timestamp: Date.now(),
+      })
+    );
   }
 }
 
@@ -173,7 +182,7 @@ export async function handleMessageReaction(
     // For now, we'll just broadcast the reaction
     // In a real app, you'd store this in a reactions table
     const broadcastMessage: WSMessage = {
-      type: "message_reaction",
+      type: 'message_reaction',
       payload: {
         message_id: payload.message_id,
         reaction: payload.reaction,
@@ -185,8 +194,7 @@ export async function handleMessageReaction(
     };
 
     broadcast.toRoom(payload.room_id, broadcastMessage);
-
   } catch (error) {
-    console.error("Error handling reaction:", error);
+    console.error('Error handling reaction:', error);
   }
 }

@@ -42,6 +42,12 @@ export interface WSMessage {
     | 'call_ended'
     | 'call_rejected'
     | 'call_end'
+    | 'join_room'
+    | 'leave_room'
+    | 'room_joined'
+    | 'room_left'
+    | 'user_joined'
+    | 'user_left'
     | 'ping'
     | 'pong';
   payload: any;

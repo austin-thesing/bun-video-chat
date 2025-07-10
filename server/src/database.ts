@@ -1,6 +1,6 @@
-import { Database } from "bun:sqlite";
-import { Kysely, SqliteDialect } from "kysely";
-import { DatabaseConnection } from "./utils/database";
+import { Database } from 'bun:sqlite';
+import { Kysely, SqliteDialect } from 'kysely';
+import { DatabaseConnection } from './utils/database';
 
 export interface DatabaseSchema {
   accounts: {
@@ -48,12 +48,12 @@ export interface DatabaseSchema {
     created_at: string;
   };
   messages: {
-    id: number;
+    id?: number;
     room_id: number | null;
     user_id: string | null;
     content: string | null;
     type: string | null;
-    created_at: string;
+    created_at?: string;
     edited_at: string | null;
     deleted_at: string | null;
   };
@@ -65,11 +65,11 @@ export interface DatabaseSchema {
   };
 }
 
-const sqlite = new Database("db.sqlite");
+const sqlite = new Database('db.sqlite');
 
 // Enable WAL mode for better concurrency
-sqlite.exec("PRAGMA journal_mode = WAL;");
-sqlite.exec("PRAGMA synchronous = NORMAL;");
+sqlite.exec('PRAGMA journal_mode = WAL;');
+sqlite.exec('PRAGMA synchronous = NORMAL;');
 
 export const db = new Kysely<DatabaseSchema>({
   dialect: new SqliteDialect({
@@ -78,6 +78,6 @@ export const db = new Kysely<DatabaseSchema>({
 });
 
 // Export the new model-based database connection
-export const dbModels = DatabaseConnection.getInstance("db.sqlite");
+export const dbModels = DatabaseConnection.getInstance('db.sqlite');
 
 export { sqlite };
