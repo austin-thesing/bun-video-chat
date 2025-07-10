@@ -10,7 +10,7 @@ function log(...args: any[]) {
 }
 
 const server = Bun.serve({
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 5000,
   development: isDev,
   async fetch(req, server) {
     const url = new URL(req.url);
@@ -50,7 +50,7 @@ const server = Bun.serve({
       }
 
       const clientPath = import.meta.dir + "/../client";
-      
+
       // Handle TypeScript/JSX files - let Bun transpile them
       if (filePath.endsWith('.tsx') || filePath.endsWith('.ts') || filePath.endsWith('.jsx') || filePath.endsWith('.js')) {
         log(`Transpiling: ${filePath}`);
@@ -64,7 +64,7 @@ const server = Bun.serve({
             sourcemap: 'inline',
             external: ['v8', 'fs', 'path', 'util', 'crypto', 'stream', 'events', 'buffer', 'os', 'url', 'querystring', 'zlib', 'http', 'https', 'net', 'tls', 'cluster', 'child_process', 'worker_threads', 'perf_hooks', 'async_hooks', 'inspector', 'repl', 'readline', 'domain', 'dgram', 'dns', 'vm', 'string_decoder', 'timers', 'tty', 'assert', 'punycode', 'constants'],
           });
-          
+
           if (transpiled.success && transpiled.outputs[0]) {
             log(`Transpilation successful: ${filePath}`);
             return new Response(await transpiled.outputs[0].text(), {
@@ -108,7 +108,7 @@ const server = Bun.serve({
                   }
                 ]
               });
-              
+
               if (transpiled.success && transpiled.outputs[0]) {
                 return new Response(await transpiled.outputs[0].text(), {
                   headers: {
@@ -120,7 +120,7 @@ const server = Bun.serve({
               log(`CSS processing error: ${e}`);
             }
           }
-          
+
           return new Response(file, {
             headers: {
               'Content-Type': 'text/css',
