@@ -1,11 +1,11 @@
 modules = ["bun-1.2"]
-run = "bun run dev"
+run = "bun run start"
 
 [nix]
 channel = "unstable"
 
 [deployment]
-run = ["sh", "-c", "bun run dev"]
+run = ["sh", "-c", "bun run build && bun run start"]
 
 [[ports]]
 localPort = 3000
