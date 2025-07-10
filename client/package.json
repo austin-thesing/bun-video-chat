@@ -1,0 +1,10 @@
+{
+  "name": "@bun-video-chat/client",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
