@@ -1,8 +1,8 @@
-import React from "react";
-import { useWebSocket } from "../../contexts/WebSocketContext";
-import { useAuth } from "../../contexts/AuthContext";
-import { useWebRTC } from "../../contexts/WebRTCContext";
-import UserItem from "./UserItem";
+import React from 'react';
+import { useWebSocket } from '../../contexts/WebSocketContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWebRTC } from '../../contexts/WebRTCContext';
+import UserItem from './UserItem';
 
 const UserList: React.FC = () => {
   const { onlineUsers } = useWebSocket();
@@ -16,7 +16,7 @@ const UserList: React.FC = () => {
     try {
       await initializeCall(userId);
     } catch (error) {
-      console.error("Failed to start call:", error);
+      console.error('Failed to start call:', error);
     }
   };
 
@@ -30,7 +30,7 @@ const UserList: React.FC = () => {
 
   return (
     <div className="overflow-y-auto">
-      <div className="p-2">
+      <div className="p-3 space-y-1">
         {otherUsers.map((user) => (
           <UserItem
             key={user.id}

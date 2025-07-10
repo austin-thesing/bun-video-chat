@@ -41,7 +41,9 @@ export interface WSMessage {
     | 'call_active'
     | 'call_ended'
     | 'call_rejected'
-    | 'call_end';
+    | 'call_end'
+    | 'ping'
+    | 'pong';
   payload: any;
   timestamp: number;
 }

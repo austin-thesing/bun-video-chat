@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { User } from "../../types";
+import React, { useState } from 'react';
+import { User } from '../../types';
 
 interface UserItemProps {
   user: User;
@@ -15,20 +15,20 @@ const UserItem: React.FC<UserItemProps> = ({ user, onStartCall }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "online":
-        return "bg-green-500";
-      case "away":
-        return "bg-yellow-500";
-      case "busy":
-        return "bg-red-500";
+      case 'online':
+        return 'bg-green-500';
+      case 'away':
+        return 'bg-yellow-500';
+      case 'busy':
+        return 'bg-red-500';
       default:
-        return "bg-gray-500";
+        return 'bg-gray-500';
     }
   };
 
   return (
     <div
-      className="w-full p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+      className="w-full px-3 py-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors duration-200"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -81,7 +81,7 @@ const UserItem: React.FC<UserItemProps> = ({ user, onStartCall }) => {
             <button
               onClick={() => {
                 // TODO: Start direct message
-                console.log("Start DM with", user.username);
+                console.log('Start DM with', user.username);
               }}
               className="p-1 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
               title="Send message"

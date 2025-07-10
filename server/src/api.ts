@@ -23,7 +23,7 @@ export async function handleApiRequest(req: Request): Promise<Response> {
     }
 
     if (path === '/api/logout' && method === 'POST') {
-      return await logoutUser(req);
+      return await logoutUser();
     }
 
     if (path === '/api/me' && method === 'GET') {
@@ -222,18 +222,29 @@ async function registerUser(req: Request): Promise<Response> {
       return new Response('Failed to create user', { status: 500 });
     }
 
-    return new Response(
-      JSON.stringify({
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 201,
-      }
-    );
+    // Create JWT token for auto-login after registration
+    const { createJWT } = await import('./auth.ts');
+    const token = await createJWT({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      name: user.name,
+    });
+
+    const userData = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      name: user.name,
+    };
+
+    return new Response(JSON.stringify(userData), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Set-Cookie': `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
+      },
+      status: 201,
+    });
   } catch (error) {
     console.error('Registration error:', error);
     return new Response(`Registration failed: ${error.message}`, {
@@ -271,28 +282,84 @@ async function loginUser(req: Request): Promise<Response> {
     return new Response('Invalid credentials', { status: 401 });
   }
 
-  return new Response(
-    JSON.stringify({
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      name: user.name,
-    }),
-    {
-      headers: { 'Content-Type': 'application/json' },
-    }
-  );
+  // Create JWT token
+  const { createJWT } = await import('./auth.ts');
+  const token = await createJWT({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    name: user.name,
+  });
+
+  const userData = {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    name: user.name,
+  };
+
+  return new Response(JSON.stringify(userData), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
+    },
+  });
 }
 
-async function logoutUser(req: Request): Promise<Response> {
-  // For now, just return success since we're using stateless JWT
+async function logoutUser(): Promise<Response> {
+  // Clear the auth cookie
   return new Response(JSON.stringify({ message: 'Logged out successfully' }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'auth-token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict',
+    },
   });
 }
 
 async function getCurrentUser(req: Request): Promise<Response> {
-  // For now, return unauthorized since we haven't implemented JWT verification
-  // TODO: Implement JWT verification from Authorization header
-  return new Response('Unauthorized', { status: 401 });
+  try {
+    // Get token from cookie
+    const cookieHeader = req.headers.get('cookie');
+    if (!cookieHeader) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const cookies = cookieHeader.split(';').reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    const token = cookies['auth-token'];
+    if (!token) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Verify JWT token
+    const { verifyJWT } = await import('./auth.ts');
+    const payload = await verifyJWT(token);
+
+    if (!payload) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Return user data from token
+    return new Response(
+      JSON.stringify({
+        id: payload.id,
+        email: payload.email,
+        username: payload.username,
+        name: payload.name,
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('getCurrentUser error:', error);
+    return new Response('Unauthorized', { status: 401 });
+  }
 }

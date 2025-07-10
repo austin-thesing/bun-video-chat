@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
-import { WebRTCProvider } from "./contexts/WebRTCContext";
-import AuthScreen from "./components/auth/AuthScreen";
-import MainLayout from "./components/layout/MainLayout";
+import React from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
+import { WebRTCProvider } from './contexts/WebRTCContext';
+import AuthScreen from './components/auth/AuthScreen';
+import MainLayout from './components/layout/MainLayout';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();

@@ -1,5 +1,5 @@
-import React from "react";
-import { Room } from "../../types";
+import React from 'react';
+import { Room } from '../../types';
 
 interface RoomItemProps {
   room: Room;
@@ -15,38 +15,41 @@ const RoomItem: React.FC<RoomItemProps> = ({ room, isActive, onClick }) => {
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } else if (diffDays === 1) {
-      return "Yesterday";
+      return 'Yesterday';
     } else if (diffDays < 7) {
-      return date.toLocaleDateString([], { weekday: "short" });
+      return date.toLocaleDateString([], { weekday: 'short' });
     } else {
-      return date.toLocaleDateString([], { month: "short", day: "numeric" });
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
   };
 
   const getRoomIcon = () => {
-    if (room.type === "direct") {
-      return "👤";
+    if (room.type === 'direct') {
+      return '👤';
     } else {
-      return "#";
+      return '#';
     }
   };
 
   return (
     <div
       onClick={onClick}
-      className={`w-full p-3 rounded-lg cursor-pointer transition-colors duration-200 ${
+      className={`w-full px-3 py-2 rounded-md cursor-pointer transition-colors duration-200 ${
         isActive
-          ? "bg-blue-100 border-blue-300 border"
-          : "hover:bg-gray-50 border border-transparent"
+          ? 'bg-blue-100 border-blue-300 border'
+          : 'hover:bg-gray-50 border border-transparent'
       }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <div
             className={`text-lg ${
-              room.type === "direct" ? "text-gray-600" : "text-blue-500"
+              room.type === 'direct' ? 'text-gray-600' : 'text-blue-500'
             }`}
           >
             {getRoomIcon()}
@@ -55,14 +58,14 @@ const RoomItem: React.FC<RoomItemProps> = ({ room, isActive, onClick }) => {
             <div className="flex items-center justify-between">
               <h3
                 className={`font-medium text-sm truncate ${
-                  isActive ? "text-blue-800" : "text-gray-900"
+                  isActive ? 'text-blue-800' : 'text-gray-900'
                 }`}
               >
                 {room.name}
               </h3>
               {room.unread_count && room.unread_count > 0 && (
                 <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full">
-                  {room.unread_count > 99 ? "99+" : room.unread_count}
+                  {room.unread_count > 99 ? '99+' : room.unread_count}
                 </span>
               )}
             </div>

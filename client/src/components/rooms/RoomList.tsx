@@ -1,17 +1,35 @@
-import React, { useState } from "react";
-import { useWebSocket } from "../../contexts/WebSocketContext";
-import RoomItem from "./RoomItem";
+import React, { useState } from 'react';
+import { useWebSocket } from '../../contexts/WebSocketContext';
+import RoomItem from './RoomItem';
 
 const RoomList: React.FC = () => {
   const { rooms, joinRoom, currentRoom, createRoom } = useWebSocket();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newRoomName, setNewRoomName] = useState("");
+  const [newRoomName, setNewRoomName] = useState('');
 
   // For demo purposes, let's create some default rooms if none exist
   const defaultRooms = [
-    { id: 1, name: "General", type: "group" as const, created_by: "system", created_at: Date.now() },
-    { id: 2, name: "Random", type: "group" as const, created_by: "system", created_at: Date.now() },
-    { id: 3, name: "Tech Talk", type: "group" as const, created_by: "system", created_at: Date.now() },
+    {
+      id: 1,
+      name: 'General',
+      type: 'group' as const,
+      created_by: 'system',
+      created_at: Date.now(),
+    },
+    {
+      id: 2,
+      name: 'Random',
+      type: 'group' as const,
+      created_by: 'system',
+      created_at: Date.now(),
+    },
+    {
+      id: 3,
+      name: 'Tech Talk',
+      type: 'group' as const,
+      created_by: 'system',
+      created_at: Date.now(),
+    },
   ];
 
   const displayRooms = rooms.length > 0 ? rooms : defaultRooms;
@@ -20,15 +38,15 @@ const RoomList: React.FC = () => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
 
-    createRoom(newRoomName.trim(), "group");
-    setNewRoomName("");
+    createRoom(newRoomName.trim(), 'group');
+    setNewRoomName('');
     setShowCreateForm(false);
   };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
-        <div className="p-2">
+        <div className="p-3 space-y-1">
           {displayRooms.map((room) => (
             <RoomItem
               key={room.id}
