@@ -1,0 +1,12 @@
+modules = ["bun-1.2"]
+run = "bun run dev"
+
+[nix]
+channel = "unstable"
+
+[deployment]
+run = ["sh", "-c", "bun run dev"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
