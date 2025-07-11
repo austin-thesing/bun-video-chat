@@ -128,6 +128,10 @@ export async function handleJoinRoom(
         m.type,
         m.created_at,
         m.edited_at,
+        m.file_name,
+        m.file_size,
+        m.file_type,
+        m.file_path,
         u.username,
         u.name,
         u.image as avatar_url
@@ -146,6 +150,10 @@ export async function handleJoinRoom(
       type: string;
       created_at: string;
       edited_at: string | null;
+      file_name: string | null;
+      file_size: number | null;
+      file_type: string | null;
+      file_path: string | null;
       username: string | null;
       name: string | null;
       avatar_url: string | null;
@@ -164,6 +172,10 @@ export async function handleJoinRoom(
           type: message.type || 'text',
           created_at: message.created_at,
           edited_at: message.edited_at,
+          file_name: message.file_name,
+          file_size: message.file_size,
+          file_type: message.file_type,
+          file_path: message.file_path,
         },
         timestamp: new Date(message.created_at || Date.now()).getTime(),
       };

@@ -1,6 +1,8 @@
 import { db, sqlite } from './database.ts';
+import { dbService } from './services/database.ts';
 import { handleAuthRequest } from './auth.ts';
 import { handleRoomCreated } from './websocket/handlers/presenceHandler.ts';
+
 import bcrypt from 'bcryptjs';
 
 // Ensure General room exists
@@ -102,6 +104,17 @@ export async function handleApiRequest(req: Request): Promise<Response> {
     ) {
       const roomId = parseInt(path.split('/')[3]);
       return await getMessages(roomId);
+    }
+
+    // File upload endpoint
+    if (path === '/api/upload' && method === 'POST') {
+      return await uploadFile(req);
+    }
+
+    // File serving endpoint
+    if (path.startsWith('/api/files/') && method === 'GET') {
+      const fileName = path.split('/')[3];
+      return await serveFile(fileName);
     }
 
     return new Response('Not Found', { status: 404 });
@@ -307,13 +320,16 @@ async function deleteRoom(req: Request, roomId: number): Promise<Response> {
 }
 
 async function getMessages(roomId: number): Promise<Response> {
-  const messages = await db
-    .selectFrom('messages')
-    .selectAll()
-    .where('room_id', '=', roomId)
-    .where('deleted_at', 'is', null)
-    .orderBy('created_at', 'asc')
-    .execute();
+  // Use raw SQLite for now due to Kysely connection issues
+  const messages = sqlite
+    .prepare(
+      `
+    SELECT * FROM messages 
+    WHERE room_id = ? AND deleted_at IS NULL 
+    ORDER BY created_at ASC
+  `
+    )
+    .all(roomId);
 
   return new Response(JSON.stringify(messages), {
     headers: { 'Content-Type': 'application/json' },
@@ -553,5 +569,159 @@ async function getCurrentUser(req: Request): Promise<Response> {
   } catch (error) {
     console.error('getCurrentUser error:', error);
     return new Response('Unauthorized', { status: 401 });
+  }
+}
+
+async function uploadFile(req: Request): Promise<Response> {
+  try {
+    // Get user from auth token
+    const cookieHeader = req.headers.get('cookie');
+    if (!cookieHeader) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const cookies = cookieHeader.split(';').reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    const token = cookies['auth-token'];
+    if (!token) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const { verifyJWT } = await import('./auth.ts');
+    const payload = await verifyJWT(token);
+    if (!payload) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Parse multipart form data
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    const roomId = formData.get('room_id') as string;
+
+    if (!file || !roomId) {
+      return new Response('Missing file or room_id', { status: 400 });
+    }
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return new Response('File too large (max 10MB)', { status: 400 });
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return new Response('File type not allowed', { status: 400 });
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomId = crypto.randomUUID().slice(0, 8);
+    const extension = file.name.split('.').pop() || '';
+    const fileName = `${timestamp}_${randomId}.${extension}`;
+
+    // Get file buffer
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Determine message type
+    const messageType = file.type.startsWith('image/') ? 'image' : 'file';
+
+    // Save to local storage
+    const localPath = `uploads/${fileName}`;
+    await Bun.write(localPath, new Uint8Array(arrayBuffer));
+
+    // Save message to database
+    const stmt = sqlite.prepare(`
+      INSERT INTO messages (room_id, user_id, content, type, file_name, file_size, file_type, file_path, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(
+      parseInt(roomId),
+      payload.id as string,
+      file.name, // Use original filename as content
+      messageType,
+      file.name,
+      file.size,
+      file.type,
+      fileName, // Store local filename
+      new Date().toISOString()
+    );
+
+    // Get the created message with user info
+    const messageStmt = sqlite.prepare(`
+      SELECT m.*, u.username 
+      FROM messages m 
+      JOIN users u ON m.user_id = u.id 
+      WHERE m.id = ?
+    `);
+    const message = messageStmt.get(result.lastInsertRowid) as any;
+
+    return new Response(
+      JSON.stringify({
+        ...message,
+        timestamp: new Date(message.created_at).getTime(),
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 201,
+      }
+    );
+  } catch (error) {
+    console.error('File upload error:', error);
+    return new Response(`Upload failed: ${error.message}`, { status: 500 });
+  }
+}
+
+async function serveFile(fileName: string): Promise<Response> {
+  try {
+    // Get file info from database to check permissions
+    const stmt = sqlite.prepare('SELECT * FROM messages WHERE file_path = ?');
+    const message = stmt.get(fileName) as any;
+
+    if (!message) {
+      return new Response('File not found in database', { status: 404 });
+    }
+
+    // Serve from local storage
+    const localPath = message.file_path.startsWith('uploads/')
+      ? message.file_path
+      : `uploads/${message.file_path}`;
+
+    const file = Bun.file(localPath);
+
+    if (!(await file.exists())) {
+      return new Response('File not found', { status: 404 });
+    }
+
+    return new Response(file, {
+      headers: {
+        'Content-Type': message.file_type || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${message.file_name}"`,
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      },
+    });
+  } catch (error) {
+    console.error('File serving error:', error);
+    return new Response('Internal server error', { status: 500 });
   }
 }

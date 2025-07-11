@@ -42,6 +42,10 @@ export interface ChatMessage {
   user_id: string;
   content: string;
   type: 'text' | 'image' | 'file';
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+  file_path?: string;
 }
 
 export interface TypingMessage {

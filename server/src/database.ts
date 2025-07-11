@@ -56,6 +56,10 @@ export interface DatabaseSchema {
     created_at?: string;
     edited_at: string | null;
     deleted_at: string | null;
+    file_name: string | null;
+    file_size: number | null;
+    file_type: string | null;
+    file_path: string | null;
   };
   room_members: {
     room_id: number | null;
@@ -65,7 +69,7 @@ export interface DatabaseSchema {
   };
 }
 
-const sqlite = new Database('db.sqlite');
+const sqlite = new Database('./db.sqlite');
 
 // Enable WAL mode for better concurrency
 sqlite.exec('PRAGMA journal_mode = WAL;');
@@ -78,6 +82,6 @@ export const db = new Kysely<DatabaseSchema>({
 });
 
 // Export the new model-based database connection
-export const dbModels = DatabaseConnection.getInstance('db.sqlite');
+export const dbModels = DatabaseConnection.getInstance('./db.sqlite');
 
 export { sqlite };

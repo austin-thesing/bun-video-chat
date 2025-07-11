@@ -138,7 +138,7 @@ const server = Bun.serve({
                       // Simple Tailwind replacement for development
                       build.onLoad({ filter: /\.css$/ }, async (args) => {
                         const text = await Bun.file(args.path).text();
-                        let processed = text
+                        const processed = text
                           .replace('@tailwind base;', '/* Base styles */')
                           .replace(
                             '@tailwind components;',

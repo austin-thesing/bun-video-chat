@@ -75,10 +75,35 @@ body {
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
 }
 
 #root {
   height: 100vh;
+  /* Use dynamic viewport height on mobile */
+  height: 100dvh;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Prevent zoom on input focus */
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Improve touch targets */
+  button {
+    min-height: 44px;
+  }
+
+  /* Safe area padding for devices with notches */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* Custom animations for typing indicator */

@@ -8,6 +8,10 @@ export interface Message {
   timestamp: number;
   edited_at?: number;
   deleted_at?: number;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+  file_path?: string;
 }
 
 export interface User {

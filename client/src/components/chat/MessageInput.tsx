@@ -3,6 +3,7 @@ import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import FileUpload from './FileUpload';
 
 interface MessageInputProps {
   roomId: number;
@@ -70,14 +71,15 @@ const MessageInput: React.FC<MessageInputProps> = ({ roomId }) => {
   };
 
   return (
-    <div className="p-4 border-t bg-background">
-      <form onSubmit={handleSubmit} className="flex space-x-2">
+    <div className="p-3 md:p-4 border-t bg-background">
+      <form onSubmit={handleSubmit} className="flex space-x-2 items-end">
+        <FileUpload roomId={roomId} />
         <Input
           type="text"
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="flex-1"
+          className="flex-1 min-w-0"
           placeholder="Type a message..."
           disabled={!isConnected}
         />
@@ -85,9 +87,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ roomId }) => {
           type="submit"
           disabled={!isConnected || !message.trim()}
           size="sm"
-          className="px-6"
+          className="px-3 md:px-6 flex-shrink-0"
         >
-          Send
+          <span className="hidden sm:inline">Send</span>
+          <span className="sm:hidden">→</span>
         </Button>
       </form>
     </div>

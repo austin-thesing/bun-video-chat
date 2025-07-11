@@ -35,41 +35,41 @@ const MainLayout: React.FC = () => {
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden fixed top-4 left-4 z-40"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-80">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header - Fixed */}
         <header className="bg-card shadow-sm border-b px-4 md:px-6 py-4 flex-shrink-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-lg md:text-xl font-semibold">
+              {/* Mobile Sidebar Trigger */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden flex-shrink-0"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-80">
+                  <Sidebar />
+                </SheetContent>
+              </Sheet>
+
+              <h1 className="text-lg md:text-xl font-semibold truncate">
                 Bun Video Chat
               </h1>
               <Badge
                 variant={isConnected ? 'default' : 'destructive'}
-                className="hidden sm:flex"
+                className="hidden sm:flex flex-shrink-0"
               >
                 {isConnected ? 'Connected' : 'Disconnected'}
               </Badge>
             </div>
 
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <span className="text-sm text-muted-foreground hidden sm:block">
+            <div className="flex items-center space-x-1 md:space-x-4 flex-shrink-0">
+              <span className="text-sm text-muted-foreground hidden lg:block truncate">
                 Welcome, {user?.username}!
               </span>
               <Button
@@ -89,7 +89,7 @@ const MainLayout: React.FC = () => {
                 onClick={() => setShowVideoCall(!showVideoCall)}
                 variant="outline"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden flex-shrink-0"
               >
                 {showVideoCall ? (
                   <VideoOff className="h-4 w-4" />
@@ -110,7 +110,7 @@ const MainLayout: React.FC = () => {
                 onClick={handleLogout}
                 variant="destructive"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden flex-shrink-0"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -144,7 +144,7 @@ const MainLayout: React.FC = () => {
 
         {/* Fixed Message Input at Bottom */}
         {currentRoom && (
-          <div className="fixed bottom-0 left-0 right-0 z-20 bg-background border-t shadow-lg md:left-64">
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-background border-t shadow-lg md:left-64 pb-safe">
             <MessageInput roomId={currentRoom} />
           </div>
         )}
