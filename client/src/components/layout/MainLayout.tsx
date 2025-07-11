@@ -57,8 +57,17 @@ const MainLayout: React.FC = () => {
                 </SheetContent>
               </Sheet>
 
-              <h1 className="text-lg md:text-xl font-semibold truncate">
-                Bun Video Chat
+              <h1 className="text-lg md:text-xl font-semibold truncate flex items-center gap-2">
+                BunChat
+                <Badge
+                  variant="secondary"
+                  className="ml-2 flex items-center gap-1 px-2 py-0.5 text-xs font-semibold"
+                >
+                  <span role="img" aria-label="sparkle">
+                    ✨
+                  </span>
+                  <span>by Design X Develop</span>
+                </Badge>
               </h1>
               <Badge
                 variant={isConnected ? 'default' : 'destructive'}

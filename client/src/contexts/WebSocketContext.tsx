@@ -134,6 +134,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       content: message.payload.content,
       type: message.payload.type || 'text',
       timestamp: message.timestamp,
+      file_name: message.payload.file_name,
+      file_path: message.payload.file_path,
+      file_type: message.payload.file_type,
+      file_size: message.payload.file_size,
+      edited_at: message.payload.edited_at,
+      deleted_at: message.payload.deleted_at,
     };
 
     // Prevent duplicate messages by checking if message already exists

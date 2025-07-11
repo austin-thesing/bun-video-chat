@@ -15,6 +15,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const { user } = useAuth();
   const { send } = useWebSocket();
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,24 +51,48 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('room_id', roomId.toString());
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
+      // Create XMLHttpRequest for progress tracking
+      const xhr = new XMLHttpRequest();
+      
+      // Set up progress handler
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          setUploadProgress(percentComplete);
+        }
+      };
+
+      // Create promise for the upload
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            reject(new Error(xhr.responseText || 'Upload failed'));
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Network error'));
+        
+        xhr.open('POST', '/api/upload');
+        xhr.setRequestHeader('credentials', 'include');
+        xhr.withCredentials = true;
+        xhr.send(formData);
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
-      }
-
-      const message = await response.json();
+      const message = await uploadPromise;
 
       // The API already creates and broadcasts the message via WebSocket
       // No need to send another WebSocket message here
@@ -78,6 +103,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       alert(`Upload failed: ${error.message}`);
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -130,9 +156,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
         className="px-3"
       >
         {isUploading ? (
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2">
             <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs">Uploading...</span>
+            <span className="text-xs">{Math.round(uploadProgress)}%</span>
           </div>
         ) : (
           <svg
@@ -179,6 +205,31 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <p className="text-sm text-gray-500">
                 Max 10MB • Images, PDFs, Documents
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Progress Bar */}
+      {isUploading && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-t p-4">
+          <div className="max-w-md mx-auto">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="font-medium">Uploading...</span>
+                  <span className="text-muted-foreground">{Math.round(uploadProgress)}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

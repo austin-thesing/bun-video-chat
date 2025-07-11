@@ -71,31 +71,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwn }) => {
     if (message.type === 'image' && message.file_path) {
       return (
         <div className="max-w-xs">
-          <div className="relative group">
-            <img
-              src={`/api/files/${message.file_path}`}
-              alt={message.file_name || 'Image'}
-              className="rounded-lg max-w-full h-auto max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
-              onClick={() => setImagePreviewOpen(true)}
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 text-white p-2 rounded-full">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
+          <img
+            src={`/api/files/${message.file_path}`}
+            alt={message.file_name || 'Image'}
+            className="rounded-lg max-w-full h-auto max-h-48 object-cover cursor-pointer shadow-sm"
+            onClick={() => setImagePreviewOpen(true)}
+          />
           {message.content && message.content !== message.file_name && (
             <p className="text-sm mt-2">{message.content}</p>
           )}

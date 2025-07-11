@@ -676,6 +676,19 @@ async function uploadFile(req: Request): Promise<Response> {
     `);
     const message = messageStmt.get(result.lastInsertRowid) as any;
 
+    // Broadcast the new message to all users in the room
+    const { broadcast } = await import('./websocket/utils.ts');
+    const broadcastMessage = {
+      type: 'chat' as const,
+      payload: {
+        ...message,
+        timestamp: new Date(message.created_at).getTime(),
+      },
+      timestamp: Date.now(),
+    };
+    
+    broadcast.toRoom(parseInt(roomId), broadcastMessage);
+
     return new Response(
       JSON.stringify({
         ...message,

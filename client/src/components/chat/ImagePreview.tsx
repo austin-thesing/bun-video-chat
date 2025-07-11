@@ -17,6 +17,28 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Reset state when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+      setHasError(false);
+    }
+  }, [isOpen]);
+
+  // Handle keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
+
   const handleImageLoad = () => {
     setIsLoading(false);
     setHasError(false);
@@ -38,16 +60,16 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] p-0 overflow-hidden bg-black/95">
-        <div className="relative flex items-center justify-center min-h-[50vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-black border-none">
+        <div className="relative flex items-center justify-center min-h-[60vh]">
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 p-2 bg-black/70 text-white rounded-full hover:bg-black/90 transition-colors"
+            className="absolute top-4 right-4 z-20 p-3 bg-white/10 backdrop-blur-sm text-white rounded-full hover:bg-white/20 transition-all duration-200"
             title="Close (ESC)"
           >
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -64,11 +86,11 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           {/* Download Button */}
           <button
             onClick={handleDownload}
-            className="absolute top-4 right-16 z-20 p-2 bg-black/70 text-white rounded-full hover:bg-black/90 transition-colors"
+            className="absolute top-4 right-20 z-20 p-3 bg-white/10 backdrop-blur-sm text-white rounded-full hover:bg-white/20 transition-all duration-200"
             title="Download image"
           >
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -77,7 +99,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                d="M12 10v6m0 0l-3-3m3 3l3-3"
               />
             </svg>
           </button>
@@ -118,7 +140,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           <img
             src={imageSrc}
             alt={imageAlt}
-            className={`max-w-full max-h-[90vh] object-contain transition-opacity duration-300 ${
+            className={`max-w-full max-h-[85vh] object-contain transition-opacity duration-300 ${
               isLoading ? 'opacity-0' : 'opacity-100'
             }`}
             onLoad={handleImageLoad}
@@ -128,7 +150,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 
           {/* Image Info */}
           {!isLoading && !hasError && (
-            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-2 rounded-lg text-sm">
+            <div className="absolute bottom-4 left-4 bg-white/10 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-sm">
               {imageAlt}
             </div>
           )}
