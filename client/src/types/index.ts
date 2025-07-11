@@ -23,7 +23,7 @@ export interface Room {
   name: string;
   type: 'direct' | 'group';
   created_by: string;
-  created_at: number;
+  created_at: string | number; // Can be ISO string from API or timestamp
   members?: User[];
   last_message?: Message;
   unread_count?: number;
@@ -36,6 +36,7 @@ export interface WSMessage {
     | 'presence'
     | 'webrtc'
     | 'room_update'
+    | 'room_created'
     | 'error'
     | 'incoming_call'
     | 'call_active'

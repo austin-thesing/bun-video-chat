@@ -7,32 +7,20 @@ const RoomList: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
 
-  // For demo purposes, let's create some default rooms if none exist
-  const defaultRooms = [
-    {
-      id: 1,
-      name: 'General',
-      type: 'group' as const,
-      created_by: 'system',
-      created_at: Date.now(),
-    },
-    {
-      id: 2,
-      name: 'Random',
-      type: 'group' as const,
-      created_by: 'system',
-      created_at: Date.now(),
-    },
-    {
-      id: 3,
-      name: 'Tech Talk',
-      type: 'group' as const,
-      created_by: 'system',
-      created_at: Date.now(),
-    },
-  ];
-
-  const displayRooms = rooms.length > 0 ? rooms : defaultRooms;
+  // Filter out rooms with null names and sort by creation date
+  const displayRooms = rooms
+    .filter((room) => room.name && room.name.trim() !== '')
+    .sort((a, b) => {
+      const dateA =
+        typeof a.created_at === 'string'
+          ? new Date(a.created_at).getTime()
+          : a.created_at;
+      const dateB =
+        typeof b.created_at === 'string'
+          ? new Date(b.created_at).getTime()
+          : b.created_at;
+      return dateB - dateA;
+    });
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,16 +34,25 @@ const RoomList: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
-        <div className="p-3 space-y-1">
-          {displayRooms.map((room) => (
-            <RoomItem
-              key={room.id}
-              room={room}
-              isActive={currentRoom === room.id}
-              onClick={() => joinRoom(room.id)}
-            />
-          ))}
-        </div>
+        {displayRooms.length > 0 ? (
+          <div className="p-3 space-y-1">
+            {displayRooms.map((room) => (
+              <RoomItem
+                key={room.id}
+                room={room}
+                isActive={currentRoom === room.id}
+                onClick={() => joinRoom(room.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 text-center">
+            <p className="text-gray-500 text-sm">No rooms available</p>
+            <p className="text-gray-400 text-xs mt-1">
+              Create a room to get started!
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Create Room Form */}

@@ -18,6 +18,8 @@ interface WebRTCContextType {
   isAudioEnabled: boolean;
   isInCall: boolean;
   connectionStates: Map<string, RTCPeerConnectionState>;
+  showVideoPreview: boolean;
+  previewTargetUser: string | null;
   initializeCall: (userId: string) => Promise<void>;
   acceptCall: (userId: string) => Promise<void>;
   endCall: (userId?: string) => void;
@@ -25,6 +27,9 @@ interface WebRTCContextType {
   toggleAudio: () => void;
   startScreenShare: () => Promise<void>;
   stopScreenShare: () => void;
+  showPreview: (userId: string) => void;
+  hidePreview: () => void;
+  startCallWithPreview: () => Promise<void>;
 }
 
 const WebRTCContext = createContext<WebRTCContextType | undefined>(undefined);
@@ -57,6 +62,10 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({
   const [connectionStates, setConnectionStates] = useState<
     Map<string, RTCPeerConnectionState>
   >(new Map());
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
+  const [previewTargetUser, setPreviewTargetUser] = useState<string | null>(
+    null
+  );
 
   // Initialize WebRTC service
   useEffect(() => {
@@ -327,6 +336,23 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const showPreview = (userId: string) => {
+    setPreviewTargetUser(userId);
+    setShowVideoPreview(true);
+  };
+
+  const hidePreview = () => {
+    setShowVideoPreview(false);
+    setPreviewTargetUser(null);
+  };
+
+  const startCallWithPreview = async () => {
+    if (previewTargetUser) {
+      hidePreview();
+      await initializeCall(previewTargetUser);
+    }
+  };
+
   return (
     <WebRTCContext.Provider
       value={{
@@ -337,6 +363,8 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({
         isAudioEnabled,
         isInCall,
         connectionStates,
+        showVideoPreview,
+        previewTargetUser,
         initializeCall,
         acceptCall,
         endCall,
@@ -344,6 +372,9 @@ export const WebRTCProvider: React.FC<{ children: React.ReactNode }> = ({
         toggleAudio,
         startScreenShare,
         stopScreenShare,
+        showPreview,
+        hidePreview,
+        startCallWithPreview,
       }}
     >
       {children}

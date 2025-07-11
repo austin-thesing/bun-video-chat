@@ -1,6 +1,26 @@
 import { db, sqlite } from './database.ts';
 import { handleAuthRequest } from './auth.ts';
+import { handleRoomCreated } from './websocket/handlers/presenceHandler.ts';
 import bcrypt from 'bcryptjs';
+
+// Ensure General room exists
+function ensureGeneralRoom() {
+  const generalRoom = sqlite
+    .prepare('SELECT * FROM rooms WHERE name = ? OR id = 1')
+    .get('General');
+
+  if (!generalRoom) {
+    const stmt = sqlite.prepare(`
+      INSERT INTO rooms (id, name, type, created_by, created_at)
+      VALUES (1, 'General', 'group', 'system', ?)
+    `);
+    stmt.run(new Date().toISOString());
+    console.log('Created default General room');
+  }
+}
+
+// Initialize General room on startup
+ensureGeneralRoom();
 
 function createAuthCookie(token: string): string {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -63,6 +83,17 @@ export async function handleApiRequest(req: Request): Promise<Response> {
       return await createRoom(req);
     }
 
+    // Room management endpoints
+    if (path.startsWith('/api/rooms/') && method === 'PUT') {
+      const roomId = parseInt(path.split('/')[3]);
+      return await updateRoom(req, roomId);
+    }
+
+    if (path.startsWith('/api/rooms/') && method === 'DELETE') {
+      const roomId = parseInt(path.split('/')[3]);
+      return await deleteRoom(req, roomId);
+    }
+
     // Messages endpoints
     if (
       path.startsWith('/api/rooms/') &&
@@ -112,7 +143,10 @@ async function createUser(req: Request): Promise<Response> {
 }
 
 async function getRooms(): Promise<Response> {
-  const rooms = await db.selectFrom('rooms').selectAll().execute();
+  // Use raw SQLite to avoid schema issues
+  const stmt = sqlite.prepare('SELECT * FROM rooms ORDER BY created_at DESC');
+  const rooms = stmt.all();
+
   return new Response(JSON.stringify(rooms), {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -134,10 +168,142 @@ async function createRoom(req: Request): Promise<Response> {
     .prepare('SELECT * FROM rooms WHERE id = ?')
     .get(result.lastInsertRowid);
 
+  // Broadcast room creation to all WebSocket clients
+  handleRoomCreated(room);
+
   return new Response(JSON.stringify(room), {
     headers: { 'Content-Type': 'application/json' },
     status: 201,
   });
+}
+
+async function updateRoom(req: Request, roomId: number): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { name, user_id } = body;
+
+    // Check if user is the creator of the room
+    const room = sqlite
+      .prepare('SELECT * FROM rooms WHERE id = ?')
+      .get(roomId) as any;
+    if (!room) {
+      return new Response(JSON.stringify({ error: 'Room not found' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
+
+    if (room.created_by !== user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Only room creator can edit room' }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
+    }
+
+    // Prevent editing the General room
+    if (room.name === 'General' || roomId === 1) {
+      return new Response(
+        JSON.stringify({ error: 'Cannot edit the General room' }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
+    }
+
+    // Update room name
+    const stmt = sqlite.prepare('UPDATE rooms SET name = ? WHERE id = ?');
+    stmt.run(name, roomId);
+
+    // Get updated room
+    const updatedRoom = sqlite
+      .prepare('SELECT * FROM rooms WHERE id = ?')
+      .get(roomId);
+
+    // Broadcast room update to all WebSocket clients
+    handleRoomCreated(updatedRoom);
+
+    return new Response(JSON.stringify(updatedRoom), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to update room' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 500,
+    });
+  }
+}
+
+async function deleteRoom(req: Request, roomId: number): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { user_id } = body;
+
+    // Check if user is the creator of the room
+    const room = sqlite
+      .prepare('SELECT * FROM rooms WHERE id = ?')
+      .get(roomId) as any;
+    if (!room) {
+      return new Response(JSON.stringify({ error: 'Room not found' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
+
+    if (room.created_by !== user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Only room creator can delete room' }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
+    }
+
+    // Prevent deleting the General room
+    if (room.name === 'General' || roomId === 1) {
+      return new Response(
+        JSON.stringify({ error: 'Cannot delete the General room' }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
+    }
+
+    // Delete room and related data
+    const deleteRoomStmt = sqlite.prepare('DELETE FROM rooms WHERE id = ?');
+    const deleteMessagesStmt = sqlite.prepare(
+      'DELETE FROM messages WHERE room_id = ?'
+    );
+    const deleteMembersStmt = sqlite.prepare(
+      'DELETE FROM room_members WHERE room_id = ?'
+    );
+
+    // Execute deletions in transaction
+    const transaction = sqlite.transaction(() => {
+      deleteMessagesStmt.run(roomId);
+      deleteMembersStmt.run(roomId);
+      deleteRoomStmt.run(roomId);
+    });
+
+    transaction();
+
+    // Broadcast room deletion to all WebSocket clients
+    handleRoomCreated({ id: roomId, deleted: true });
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to delete room' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 500,
+    });
+  }
 }
 
 async function getMessages(roomId: number): Promise<Response> {

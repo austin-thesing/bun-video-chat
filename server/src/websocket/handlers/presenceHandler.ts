@@ -272,3 +272,14 @@ function sendRoomUsersList(ws: ServerWebSocket<WebSocketData>, roomId: number) {
     })
   );
 }
+
+export function handleRoomCreated(roomData: any) {
+  // Broadcast new room to all connected users
+  const broadcastMessage: WSMessage = {
+    type: 'room_update',
+    payload: roomData,
+    timestamp: Date.now(),
+  };
+
+  broadcast.toAll(broadcastMessage);
+}

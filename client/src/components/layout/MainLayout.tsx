@@ -4,7 +4,9 @@ import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useWebRTC } from '../../contexts/WebRTCContext';
 import Sidebar from './Sidebar';
 import ChatWindow from '../chat/ChatWindow';
+import MessageInput from '../chat/MessageInput';
 import VideoCall from '../video/VideoCall';
+import VideoPreview from '../video/VideoPreview';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
@@ -12,8 +14,14 @@ import { Menu, Video, VideoOff, LogOut } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
-  const { isConnected } = useWebSocket();
-  const { isInCall } = useWebRTC();
+  const { isConnected, currentRoom } = useWebSocket();
+  const {
+    isInCall,
+    showVideoPreview,
+    previewTargetUser,
+    hidePreview,
+    startCallWithPreview,
+  } = useWebRTC();
   const [showVideoCall, setShowVideoCall] = useState(false);
 
   const handleLogout = async () => {
@@ -21,9 +29,9 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+    <div className="h-screen bg-background flex overflow-hidden">
+      {/* Desktop Sidebar - Fixed */}
+      <div className="hidden md:block flex-shrink-0">
         <Sidebar />
       </div>
 
@@ -44,9 +52,9 @@ const MainLayout: React.FC = () => {
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-card shadow-sm border-b px-4 md:px-6 py-4">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header - Fixed */}
+        <header className="bg-card shadow-sm border-b px-4 md:px-6 py-4 flex-shrink-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-lg md:text-xl font-semibold">
@@ -110,29 +118,36 @@ const MainLayout: React.FC = () => {
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col md:flex-row">
+        {/* Main Content Area - Scrollable */}
+        <div className="flex-1 flex flex-col md:flex-row min-h-0">
           {/* Chat Area */}
           <div
-            className={`${showVideoCall && !isInCall ? 'md:flex-1' : 'w-full'} flex flex-col`}
+            className={`${showVideoCall && !isInCall ? 'md:flex-1' : 'w-full'} flex flex-col min-h-0`}
           >
             <ChatWindow />
           </div>
 
           {/* Video Call Area - Desktop */}
           {showVideoCall && !isInCall && (
-            <div className="hidden md:block w-96 border-l bg-card">
+            <div className="hidden md:block w-96 border-l bg-card flex-shrink-0">
               <VideoCall />
             </div>
           )}
 
           {/* Video Call Area - Mobile (Full Width) */}
           {showVideoCall && !isInCall && (
-            <div className="md:hidden h-64 border-t bg-card">
+            <div className="md:hidden h-64 border-t bg-card flex-shrink-0">
               <VideoCall />
             </div>
           )}
         </div>
+
+        {/* Fixed Message Input at Bottom */}
+        {currentRoom && (
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-background border-t shadow-lg md:left-64">
+            <MessageInput roomId={currentRoom} />
+          </div>
+        )}
       </div>
 
       {/* Full Screen Video Call Overlay */}
@@ -140,6 +155,15 @@ const MainLayout: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
           <VideoCall isFullScreen />
         </div>
+      )}
+
+      {/* Video Preview Modal */}
+      {showVideoPreview && (
+        <VideoPreview
+          onStartCall={startCallWithPreview}
+          onCancel={hidePreview}
+          targetUser={previewTargetUser || undefined}
+        />
       )}
     </div>
   );

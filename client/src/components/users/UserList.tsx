@@ -7,17 +7,13 @@ import UserItem from './UserItem';
 const UserList: React.FC = () => {
   const { onlineUsers } = useWebSocket();
   const { user: currentUser } = useAuth();
-  const { initializeCall } = useWebRTC();
+  const { showPreview } = useWebRTC();
 
   // Filter out current user from the list
   const otherUsers = onlineUsers.filter((user) => user.id !== currentUser?.id);
 
-  const handleStartCall = async (userId: string) => {
-    try {
-      await initializeCall(userId);
-    } catch (error) {
-      console.error('Failed to start call:', error);
-    }
+  const handleStartCall = (userId: string) => {
+    showPreview(userId);
   };
 
   if (otherUsers.length === 0) {

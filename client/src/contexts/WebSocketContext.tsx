@@ -24,6 +24,8 @@ interface WebSocketContextType {
     type: 'direct' | 'group',
     memberIds?: string[]
   ) => void;
+  updateRoom: (roomId: number, name: string) => Promise<void>;
+  deleteRoom: (roomId: number) => Promise<void>;
   send: (message: WSMessage) => void;
   addMessageHandler: (handler: (message: WSMessage) => void) => void;
   removeMessageHandler: (handler: (message: WSMessage) => void) => void;
@@ -72,6 +74,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
           handleTypingMessage(message);
           break;
         case 'room_update':
+        case 'room_created':
           handleRoomUpdate(message);
           break;
         case 'room_joined':
@@ -96,6 +99,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     wsService.current.connect().then(() => {
       setIsConnected(true);
+
+      // Load initial rooms
+      loadRooms();
+
       // Send initial presence
       wsService.current?.send({
         type: 'presence',
@@ -106,8 +113,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         },
         timestamp: Date.now(),
       });
-    });
 
+      // Auto-join General room (ID: 1)
+      setTimeout(() => {
+        joinRoom(1);
+      }, 1000); // Small delay to ensure rooms are loaded
+    });
     return () => {
       wsService.current?.removeMessageHandler(handleMessage);
       wsService.current?.disconnect();
@@ -124,7 +135,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       type: message.payload.type || 'text',
       timestamp: message.timestamp,
     };
-    setMessages((prev) => [...prev, chatMessage]);
+
+    // Prevent duplicate messages by checking if message already exists
+    setMessages((prev) => {
+      const exists = prev.some((msg) => msg.id === chatMessage.id);
+      if (exists) return prev;
+      return [...prev, chatMessage];
+    });
   };
 
   const handlePresenceMessage = (message: WSMessage) => {
@@ -226,7 +243,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const joinRoom = (roomId: number) => {
     if (!wsService.current || !user) return;
 
+    // Don't rejoin the same room
+    if (currentRoom === roomId) return;
+
     setCurrentRoom(roomId);
+
+    // Clear messages when switching rooms to avoid showing old messages
+    setMessages([]);
 
     // Send join room message to server
     wsService.current.send({
@@ -238,12 +261,122 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const createRoom = (
+  const loadRooms = async () => {
+    try {
+      const response = await fetch('/api/rooms');
+      if (response.ok) {
+        const roomsData = await response.json();
+        setRooms(roomsData);
+      } else {
+        console.error('Failed to load rooms:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error loading rooms:', error);
+    }
+  };
+
+  const createRoom = async (
     name: string,
     type: 'direct' | 'group',
     memberIds?: string[]
   ) => {
-    // TODO: Send create room request to server
+    if (!user) return;
+
+    try {
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          type,
+          created_by: user.id,
+        }),
+      });
+
+      if (response.ok) {
+        const newRoom = await response.json();
+
+        // Add room to local state
+        setRooms((prev) => [...prev, newRoom]);
+
+        // Auto-join the created room
+        joinRoom(newRoom.id);
+
+        // Note: Server will broadcast room creation to other users via WebSocket
+      } else {
+        console.error('Failed to create room:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error creating room:', error);
+    }
+  };
+
+  const updateRoom = async (roomId: number, name: string) => {
+    if (!user) return;
+
+    try {
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          user_id: user.id,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedRoom = await response.json();
+
+        // Update room in local state
+        setRooms((prev) =>
+          prev.map((room) => (room.id === roomId ? updatedRoom : room))
+        );
+      } else {
+        const error = await response.json();
+        console.error('Failed to update room:', error.error);
+        alert(error.error || 'Failed to update room');
+      }
+    } catch (error) {
+      console.error('Error updating room:', error);
+      alert('Failed to update room');
+    }
+  };
+
+  const deleteRoom = async (roomId: number) => {
+    if (!user) return;
+
+    try {
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+        }),
+      });
+
+      if (response.ok) {
+        // Remove room from local state
+        setRooms((prev) => prev.filter((room) => room.id !== roomId));
+
+        // If user was in the deleted room, switch to General room
+        if (currentRoom === roomId) {
+          joinRoom(1); // Join General room
+        }
+      } else {
+        const error = await response.json();
+        console.error('Failed to delete room:', error.error);
+        alert(error.error || 'Failed to delete room');
+      }
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      alert('Failed to delete room');
+    }
   };
 
   const send = (message: WSMessage) => {
@@ -274,6 +407,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         sendTyping,
         joinRoom,
         createRoom,
+        updateRoom,
+        deleteRoom,
         send,
         addMessageHandler,
         removeMessageHandler,
